@@ -1,0 +1,19 @@
+---
+# defaults file for ansible-role-rhel-host
+  master_node: true
+  os_family_supported: "RedHat"
+  os_min_supported_version: "6.4"
+
+# Users & groups
+  rhel_groups:
+    - { group: zafinlabs, gid: 54318 }
+
+  rhel_users:         # Passwd 
+   - { username: zafin, uid: 54321, primgroup: zafinlabs, passwd: "$6$0xHoAXXF$K75HKb64Hcb/CEcr3YEj2LGERi/U2moJgsCK.ztGxLsKoaXc4UBiNZPL0hlxB5ng6GL.gyipfQOOXplzcdgvD0" }
+
+# Security & OS Config
+
+  configure_etc_hosts: false
+  install_os_packages: true
+  disable_selinux: true
+  disable_iptables: true

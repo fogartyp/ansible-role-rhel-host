@@ -1,0 +1,56 @@
+---
+# tasks file for ansible-role-rhel-host
+
+  - name: Check for correct OS family & min version
+    assert:
+      that: "ansible_os_family == '{{ os_family_supported }}'"
+      that: "ansible_distribution_version >= '{{ os_min_supported_version }}'"
+    tags:
+     - oscheck
+
+  - name: User | Add group(s)
+    group: name={{ item.group }} gid={{ item.gid }} state=present
+    with_items: rhel_groups
+    tags:
+     - group
+
+  - name: User | Add RHEL user
+    user: name={{ item.username }}  group={{ item.primgroup }} groups={{ item.othergroups }} uid={{ item.uid }} generate_ssh_key=yes append=yes state=present password={{ item.passwd }}
+    with_items: rhel_users
+    tags:
+     - user
+
+  - name: User | bash_profile
+    template: src=bash_profile.j2 dest=/home/{{ item.username }}/.bash_profile owner={{ item.username }} mode=0644
+    with_items: rhel_users
+    tags:
+     - user
+
+  - name: Disable iptables
+    service: name=iptables state=stopped enabled=no
+    when: disable_iptables
+    tags: iptables
+    register: iptables
+
+  - name: Disable selinux (permanently)
+    selinux: state=disabled
+    when: disable_selinux
+    tags: selinux
+    register: selinux
+
+  - name: Disable selinux (runtime)
+    shell: setenforce 0
+    when: disable_selinux
+    tags: selinux
+    ignore_errors: true
+
+  - name: Check dns for host
+    command: nslookup {{ ansible_hostname }}
+    register: ns
+    ignore_errors: True
+    tags: etchosts
+
+  - name: Add host to /etc/hosts if needed
+    lineinfile: dest=/etc/hosts regexp='.*{{ ansible_fqdn }}$' line="{{ ansible_default_ipv4.address }} {{ ansible_hostname }} {{ ansible_fqdn }}" state=present
+    when: "'find {{ ansible_hostname }}: NXDOMAIN' in ns.stdout"
+    tags: etchosts
